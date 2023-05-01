@@ -13,7 +13,7 @@ optional_port_forwarding=7777:10.0.0.41:22
 port_forwarding_local_port=$(echo $optional_port_forwarding | awk -F ':' '{print $1}')
 
 #Make Sure there isn't already a session running.
-existing_socks5=$(netstat -n | grep 25000)
+existing_socks5=$(netstat -ant | awk '{print $4}' | grep 25000)
 if [ ! -z "$existing_socks5" ]; then
     echo ""
     echo "There is an existing SOCKS5 session running on port 25000."
@@ -22,7 +22,7 @@ if [ ! -z "$existing_socks5" ]; then
 fi
 
 if [ ! -z "$port_forwarding_local_port" ]; then
-    existing_port_forwarding=$(netstat -n | grep "$port_forwarding_local_port")
+    existing_port_forwarding=$(netstat -ant | awk '{print $4}' | grep "$port_forwarding_local_port")
     if [ ! -z "$existing_port_forwarding" ]; then
         echo ""
         echo "There is an existing port forwarding connection on $port_forwarding_local_port"
@@ -35,15 +35,16 @@ fi
 bastion_session=$(oci bastion session create-session-create-dynamic-port-forwarding-session-target-resource-details \
 --bastion-id $bastion_ocid \
 --key-details "{\"publicKeyContent\": \"$public_key\"}" \
---wait-for-state "ACCEPTED" \
+--wait-for-state "SUCCEEDED" \
 --session-ttl-in-seconds $session_ttl)
 
 bastion_session_identifier=$(echo $bastion_session | jq | grep "identifier" | awk -F ':' '{print $2}' | tr -d "' \"")
 echo "Bastion Session Identifier, $bastion_session_identifier"
-echo "Script will sleep for 20 seconds to give the Bastion Session time to create."
+echo "Script will sleep for 10 seconds to give the Bastion Session time to create."
 
 #There is healthchecks here that can be used, making this better. I recommend using the Python script for more advanced features.
-sleep 20
+#This value might need to be tuned
+sleep 10
 
 #Get the metadata from the new bastion session
 bastion_session_details=$(oci bastion session get --session-id $bastion_session_identifier)
@@ -54,8 +55,8 @@ bastion_session_ssh_details=$(echo $bastion_session_details | jq | grep command 
 if [ -z "$optional_port_forwarding" ]; then
     echo ""
     echo "OCI SOCKS5 PROXY @ localhost:25000"
-    oci_socks5_proxy=$(exec ssh -i $private_key_file -N -D 127.0.0.1:25000 -p 22 "$bastion_session_ssh_details" \
-    -o PubkeyAcceptedKeyTypes=ssh-rsa -o HostKeyAlgorithms=ssh-rsa -o serveraliveinterval=60 )
+    ssh -i $private_key_file -N -D 127.0.0.1:25000 -p 22 "$bastion_session_ssh_details" \
+    -o PubkeyAcceptedKeyTypes=ssh-rsa -o HostKeyAlgorithms=ssh-rsa -o serveraliveinterval=60 &
 fi
 
 if [ ! -z "$optional_port_forwarding" ]; then
@@ -63,7 +64,7 @@ if [ ! -z "$optional_port_forwarding" ]; then
     echo "OCI SOCKS5 PROXY @ localhost:25000"
     echo "Port Forwarding @ localhost:$port_forwarding_local_port"
     ssh -i $private_key_file -N -D 127.0.0.1:25000 -p 22 "$bastion_session_ssh_details" \
-    -o PubkeyAcceptedKeyTypes=ssh-rsa -o HostKeyAlgorithms=ssh-rsa -o serveraliveinterval=60 & 
+    -o PubkeyAcceptedKeyTypes=ssh-rsa -o HostKeyAlgorithms=ssh-rsa -o serveraliveinterval=60 -o StrictHostKeyChecking=no & 
     ssh -i $private_key_file -N -L $optional_port_forwarding $bastion_session_ssh_details \
-    -o PubkeyAcceptedKeyTypes=ssh-rsa -o HostKeyAlgorithms=ssh-rsa -o serveraliveinterval=60 &
+    -o PubkeyAcceptedKeyTypes=ssh-rsa -o HostKeyAlgorithms=ssh-rsa -o serveraliveinterval=60 -o StrictHostKeyChecking=no &
 fi
