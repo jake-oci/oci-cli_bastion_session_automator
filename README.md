@@ -12,7 +12,9 @@ https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/cliinstall.htm
 **Set your cryptography files and your Bastion Host OCID in the variables of the script.** 
 
 private_key_file=~/.ssh/id_rsa #Add Your Private Key File
+
 public_key=$(cat ~/.ssh/id_rsa.pub) #Add your matching Public Key File
+
 bastion_ocid="ocid1.bastion.oc1.iad.xxx" #Add your Bastion OCID
 
 **Run the script**
