@@ -1,11 +1,11 @@
-private_key_file=~/.ssh/id_rsa
-public_key=$(cat ~/.ssh/id_rsa.pub)
-bastion_ocid="ocid1.bastion.oc1.iad.amaaaaaac3adhhqa4bjhudnoywk2t4rzncgty72hwibdbotyuy4xaxtpsh5a"
+private_key_file=~/.ssh/id_rsa #Add Your Private Key File
+public_key=$(cat ~/.ssh/id_rsa.pub) #Add your matching Public Key File
+bastion_ocid="ocid1.bastion.oc1.iad.xxxxx" #Add your Bastion OCID
 session_ttl=3600
 
 #optional_port_forwarding=RANDOM_LOCAL_PORT:OCI_PRIVATE_IP:OCI_PORT_NUMBER
 #EXAMPLE: optional_port_forwarding=7777:10.0.0.41:22
-optional_port_forwarding=7777:10.0.0.41:22
+#optional_port_forwarding=7777:10.0.0.41:22
 
 
 ####RUN THE SCRIPT#####
@@ -56,7 +56,7 @@ if [ -z "$optional_port_forwarding" ]; then
     echo ""
     echo "OCI SOCKS5 PROXY @ localhost:25000"
     ssh -i $private_key_file -N -D 127.0.0.1:25000 -p 22 "$bastion_session_ssh_details" \
-    -o PubkeyAcceptedKeyTypes=ssh-rsa -o HostKeyAlgorithms=ssh-rsa -o serveraliveinterval=60 &
+    -o PubkeyAcceptedKeyTypes=ssh-rsa -o HostKeyAlgorithms=ssh-rsa -o serveraliveinterval=60 -o StrictHostKeyChecking=no &
 fi
 
 if [ ! -z "$optional_port_forwarding" ]; then
